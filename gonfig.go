@@ -38,7 +38,7 @@ func WithScanners(scanners ...Scanner) func(*Engine) {
 func (e Engine) Unmarshal(v interface{}) error {
 	for _, scanner := range e.scanners {
 		if err := scanner.Struct(v); err != nil {
-			if !scanner.SkipOnFail() {
+			if scanner.BreakOnError() {
 				return err
 			}
 		}
@@ -48,20 +48,17 @@ func (e Engine) Unmarshal(v interface{}) error {
 
 type Scanner interface {
 	Struct(v interface{}) error
-	SkipOnFail() bool
+	BreakOnError() bool
 }
 
 type ymlScanner struct {
-	filePath   string
-	skipOnFail bool
+	filePath     string
+	breakOnError bool
 }
 
 func (s ymlScanner) Struct(v interface{}) error {
 	fb, err := ioutil.ReadFile(s.filePath)
 	if err != nil {
-		if s.skipOnFail {
-			return nil
-		}
 		return err
 	}
 	m := make(map[string]interface{})
@@ -71,39 +68,39 @@ func (s ymlScanner) Struct(v interface{}) error {
 	return mapstructure.Decode(m, v)
 }
 
-func (s ymlScanner) SkipOnFail() bool {
-	return s.skipOnFail
+func (s ymlScanner) BreakOnError() bool {
+	return s.breakOnError
 }
 
 func NewYMLScanner(
 	filePath string,
-	skipOnFail bool,
+	breakOnError bool,
 ) Scanner {
 	return &ymlScanner{
-		filePath:   filePath,
-		skipOnFail: skipOnFail,
+		filePath:     filePath,
+		breakOnError: breakOnError,
 	}
 }
 
 type envScanner struct {
-	prefix     string
-	skipOnFail bool
+	prefix       string
+	breakOnError bool
 }
 
 func (s envScanner) Struct(v interface{}) error {
 	return envconfig.Process(s.prefix, v)
 }
 
-func (s envScanner) SkipOnFail() bool {
-	return s.skipOnFail
+func (s envScanner) BreakOnError() bool {
+	return s.breakOnError
 }
 
 func NewEnvScanner(
 	prefix string,
-	skipOnFail bool,
+	breakOnError bool,
 ) Scanner {
 	return &envScanner{
-		prefix:     prefix,
-		skipOnFail: skipOnFail,
+		prefix:       prefix,
+		breakOnError: breakOnError,
 	}
 }
